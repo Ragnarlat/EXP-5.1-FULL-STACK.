@@ -1,0 +1,109 @@
+// main.js
+
+const express = require("express");
+const mongoose = require("mongoose");
+const app = express();
+
+app.use(express.json());
+
+// ✅ Connect to MongoDB
+mongoose
+  .connect("mongodb://127.0.0.1:27017/ecommerce_catalog", {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => console.log("✅ MongoDB connected"))
+  .catch((err) => console.log("MongoDB connection error:", err));
+
+// ✅ Product Schema with Nested Variants
+const variantSchema = new mongoose.Schema({
+  color: String,
+  size: String,
+  stock: Number,
+});
+
+const productSchema = new mongoose.Schema({
+  name: String,
+  price: Number,
+  category: String,
+  variants: [variantSchema],
+});
+
+const Product = mongoose.model("Product", productSchema);
+
+// ✅ Insert sample data (only once)
+app.get("/insert-sample", async (req, res) => {
+  try {
+    await Product.deleteMany(); // clear old data
+
+    const products = [
+      {
+        name: "Smartphone",
+        price: 600,
+        category: "Electronics",
+        variants: [],
+      },
+      {
+        name: "Running Shoes",
+        price: 120,
+        category: "Footwear",
+        variants: [
+          { color: "Red", size: "8", stock: 50 },
+          { color: "Blue", size: "9", stock: 30 },
+        ],
+      },
+      {
+        name: "T-shirt",
+        price: 25,
+        category: "Apparel",
+        variants: [
+          { color: "Black", size: "M", stock: 100 },
+          { color: "White", size: "L", stock: 60 },
+        ],
+      },
+    ];
+
+    await Product.insertMany(products);
+    res.status(201).json({ message: "Sample data inserted successfully!" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ 1. Get all products
+app.get("/products", async (req, res) => {
+  try {
+    const products = await Product.find();
+    res.status(200).json(products);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ 2. Get products by category
+app.get("/products/category/:category", async (req, res) => {
+  try {
+    const category = req.params.category;
+    const products = await Product.find({ category: category });
+    res.status(200).json(products);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ 3. Get products by variant color
+app.get("/products/by-color/:color", async (req, res) => {
+  try {
+    const color = req.params.color;
+    const products = await Product.find({ "variants.color": color });
+    res.status(200).json(products);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ Start Server
+const PORT = 4000; // change if needed
+app.listen(PORT, () =>
+  console.log(🚀 Server running on http://localhost:${PORT})
+);
